@@ -14,6 +14,7 @@ Variabili d'ambiente (nel workflow arrivano da GitHub Secrets/Variables):
 I font Poppins vanno messi nella cartella "fonts" accanto a questo file.
 """
 import datetime as dt
+import functools
 import math
 import os
 import re
@@ -223,6 +224,7 @@ def icon_kind(code):
     return "rain"
 
 
+@functools.lru_cache(maxsize=None)
 def make_icon(kind, size, night=False):
     """Icona al tratto, disegnata ingrandita 4x e poi ridotta (bordi lisci)."""
     S = 4
@@ -372,7 +374,7 @@ def birthdays(events, now, days=60):
     return out
 
 
-def render(now, events, ev_err, weather, w_err):
+def render(now, events, ev_err, weather, w_err, generated=None):
     img = Image.new("L", (W, H), 255)
     d = ImageDraw.Draw(img)
 
@@ -492,7 +494,7 @@ def render(now, events, ev_err, weather, w_err):
             y += 28
 
     # --- Piede
-    text(d, W / 2, 770, "aggiornato alle %s" % now.strftime("%H:%M"),
+    text(d, W / 2, 770, "dati aggiornati alle %s" % (generated or now).strftime("%H:%M"),
          font(13), 140, "ms")
     return img
 
@@ -514,10 +516,26 @@ def main():
                      "caratteri tra lettere, numeri, - e _).")
         events, ev_err = fetch_events(now)
         weather, w_err = fetch_weather(now)
-        os.makedirs(os.path.join("site", secret), exist_ok=True)
+        outdir = os.path.join("site", secret)
+        os.makedirs(outdir, exist_ok=True)
         with open(os.path.join("site", "index.html"), "w") as f:
             f.write("<!doctype html><title>.</title>")
-        out_path = os.path.join("site", secret, "dashboard.png")
+        # Una immagine per ogni minuto: il Kindle scarica quella del minuto
+        # corrente (dash-HHMM.png), così l'orario è sempre esatto.
+        minutes = int(os.environ.get("MINUTES", "90"))
+        base = now.replace(second=0, microsecond=0)
+        for k in range(minutes):
+            t = base + dt.timedelta(minutes=k)
+            im = render(t, events, ev_err, weather, w_err, generated=now)
+            im.save(os.path.join(outdir, "dash-%s.png" % t.strftime("%H%M")))
+            if k == 0:
+                im.save(os.path.join(outdir, "dashboard.png"), optimize=True)
+        print("Generate %d immagini (una per minuto)." % minutes)
+        if ev_err:
+            print("Avviso:", ev_err)
+        if w_err:
+            print("Avviso:", w_err)
+        return
 
     img = render(now, events, ev_err, weather, w_err)
     img.save(out_path, optimize=True)
