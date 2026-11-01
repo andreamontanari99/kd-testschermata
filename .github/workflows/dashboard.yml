@@ -31,6 +31,7 @@ jobs:
         run: python generate.py
         env:
           ICAL_URL: ${{ secrets.ICAL_URL }}
+          BIRTHDAYS_ICAL_URL: ${{ secrets.BIRTHDAYS_ICAL_URL }}
           SECRET_PATH: ${{ secrets.SECRET_PATH }}
           LAT: ${{ vars.LAT }}
           LON: ${{ vars.LON }}
