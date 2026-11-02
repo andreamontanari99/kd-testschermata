@@ -522,7 +522,7 @@ def main():
             f.write("<!doctype html><title>.</title>")
         # Una immagine per ogni minuto: il Kindle scarica quella del minuto
         # corrente (dash-HHMM.png), così l'orario è sempre esatto.
-        minutes = int(os.environ.get("MINUTES", "90"))
+        minutes = int(os.environ.get("MINUTES", "240"))
         base = now.replace(second=0, microsecond=0)
         for k in range(minutes):
             t = base + dt.timedelta(minutes=k)
